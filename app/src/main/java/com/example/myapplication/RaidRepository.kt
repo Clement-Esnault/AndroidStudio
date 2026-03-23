@@ -59,7 +59,7 @@ class RaidRepository(private val context: Context) {
         RaidApiService.getAllRaids().onSuccess { saveLocally(it) }
     }
 
-    private fun pushDirtyRaids() {
+    private suspend fun pushDirtyRaids() {
         val dirtyIds   = getDirtyIds()
         if (dirtyIds.isEmpty()) return
         val localRaids = loadLocally().toMutableList()

@@ -1,72 +1,72 @@
 package com.example.myapplication
 
-import android.app.Application
-import androidx.compose.runtime.*
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class RaidViewModel(application: Application) : AndroidViewModel(application) {
+class RaidViewModel : ViewModel() {
 
-    private val repository = RaidRepository(application.applicationContext)
+    private val _raids       = MutableStateFlow<List<Raid>>(emptyList())
+    val raids: StateFlow<List<Raid>> = _raids
 
-    val raids        = mutableStateListOf<Raid>()
-    var isLoading    by mutableStateOf(false)
-    var errorMessage by mutableStateOf<String?>(null)
-    var syncSuccess  by mutableStateOf(false)
-    var isOnline     by mutableStateOf(false)
+    private val _isLoading   = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
 
-    init {
-        raids.addAll(repository.loadLocally())
-        isOnline = repository.isOnline()
-    }
+    private val _errorMsg    = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMsg
 
+    private val _syncSuccess = MutableStateFlow(false)
+    val syncSuccess: StateFlow<Boolean> = _syncSuccess
+
+    // ── Synchronisation des raids depuis l'API / GitHub
     fun sync() {
         viewModelScope.launch {
-            isLoading   = true
-            syncSuccess = false
-            isOnline    = repository.isOnline()
-            repository.syncFromServer()
-                .onSuccess { result ->
-                    raids.clear()
-                    raids.addAll(result)
-                    syncSuccess = true
-                    launch { delay(3000); syncSuccess = false }
-                }
-                .onFailure {
-                    raids.clear()
-                    raids.addAll(repository.loadLocally())
-                    errorMessage = it.message
-                }
-            isLoading = false
+            _isLoading.value   = true
+            _errorMsg.value    = null
+            _syncSuccess.value = false
+
+            val result = RaidApiService.getAllRaids()
+            result.onSuccess { raids ->
+                _raids.value       = raids
+                _syncSuccess.value = true
+            }.onFailure { e ->
+                _errorMsg.value = e.message ?: "Erreur inconnue"
+                e.printStackTrace()
+            }
+
+            _isLoading.value = false
         }
     }
 
     fun create(raid: Raid) {
+        if (RaidApiService.SOURCE == RaidApiService.Source.GITHUB) return
         viewModelScope.launch {
-            repository.createRaid(raid)
-                .onSuccess { raids.add(it) }
-                .onFailure { errorMessage = "Erreur création : ${it.message}" }
+            val result = RaidApiService.createRaid(raid)
+            result.onSuccess { sync() }
+            result.onFailure { _errorMsg.value = it.message }
         }
     }
 
     fun edit(raid: Raid) {
+        if (RaidApiService.SOURCE == RaidApiService.Source.GITHUB) return
         viewModelScope.launch {
-            repository.updateRaid(raid)
-                .onSuccess { updated ->
-                    val i = raids.indexOfFirst { it.id == updated.id }
-                    if (i != -1) raids[i] = updated
-                }
-                .onFailure { errorMessage = "Erreur modification : ${it.message}" }
+            val result = RaidApiService.updateRaid(raid)
+            result.onSuccess { sync() }
+            result.onFailure { _errorMsg.value = it.message }
         }
     }
 
     fun delete(id: Int) {
+        if (RaidApiService.SOURCE == RaidApiService.Source.GITHUB) {
+            _raids.value = _raids.value.filter { it.id != id }
+            return
+        }
         viewModelScope.launch {
-            repository.deleteRaid(id)
-                .onSuccess { raids.removeIf { it.id == id } }
-                .onFailure { errorMessage = "Erreur suppression : ${it.message}" }
+            val result = RaidApiService.deleteRaid(id)
+            result.onSuccess { sync() }
+            result.onFailure { _errorMsg.value = it.message }
         }
     }
 }
