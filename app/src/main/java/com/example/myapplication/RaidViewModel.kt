@@ -1,14 +1,15 @@
 package com.example.myapplication
 
+import android.app.Application
 import androidx.compose.runtime.*
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class RaidViewModel : ViewModel() {
-
-    private val repository = RaidRepository()
+class RaidViewModel(application: Application) : AndroidViewModel(application) {
+    private val repository = RaidRepository(application.applicationContext)
 
     val raids        = mutableStateListOf<Raid>()
     var isLoading    by mutableStateOf(false)
@@ -27,19 +28,18 @@ class RaidViewModel : ViewModel() {
             isLoading    = true
             syncSuccess  = false
             errorMessage = null
-            repository.syncFromServer()
+            repository.syncFromServer(token)
                 .onSuccess { result ->
                     raids.clear()
                     raids.addAll(result)
                     syncSuccess = true
-                    // Cache le bandeau vert après 3 secondes
                     launch {
                         delay(3000)
                         syncSuccess = false
                     }
                 }
                 .onFailure {
-                    val local = repository.getLocalRaids()
+                    val local = repository.loadLocally()
                     raids.clear()
                     raids.addAll(local)
                     errorMessage = if (local.isEmpty())
