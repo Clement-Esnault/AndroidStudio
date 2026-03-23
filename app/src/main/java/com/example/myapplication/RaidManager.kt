@@ -1,5 +1,5 @@
-import com.example.myapplication.Raid
-import com.example.myapplication.RaidApiService
+package com.example.myapplication
+
 import kotlin.collections.toMutableList
 
 object RaidManager {
@@ -9,7 +9,7 @@ object RaidManager {
     // Charger depuis l'API
     fun loadFromServer(token: String, onComplete: (Boolean) -> Unit) {
         Thread {
-            RaidApiService.getAllRaids(token).onSuccess { raids ->
+            RaidApiService.getAllRaids().onSuccess { raids ->
                 listRaids = raids.toMutableList()
                 onComplete(true)
             }.onFailure { onComplete(false) }
@@ -26,7 +26,7 @@ object RaidManager {
 
         // 2. Envoi asynchrone au serveur pour le sujet
         Thread {
-            RaidApiService.updateRaid(updatedRaid, token).onFailure {
+            RaidApiService.updateRaid(updatedRaid).onFailure {
                 // Optionnel : gérer ici si le serveur refuse (ex: remettre l'ancienne valeur)
                 println("Note: Echec synchro serveur (401?), mais gardé en local.")
             }

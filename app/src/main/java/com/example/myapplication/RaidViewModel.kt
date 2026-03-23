@@ -3,100 +3,70 @@ package com.example.myapplication
 import android.app.Application
 import androidx.compose.runtime.*
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class RaidViewModel(application: Application) : AndroidViewModel(application) {
+
     private val repository = RaidRepository(application.applicationContext)
 
     val raids        = mutableStateListOf<Raid>()
     var isLoading    by mutableStateOf(false)
     var errorMessage by mutableStateOf<String?>(null)
     var syncSuccess  by mutableStateOf(false)
+    var isOnline     by mutableStateOf(false)
 
-    // Token fictif pour le mock (sera remplacé par le vrai token après login)
-    private val token = "mock-token"
-
-    // ------------------------------------------------------------------ //
-    //  Synchronisation
-    // ------------------------------------------------------------------ //
+    init {
+        raids.addAll(repository.loadLocally())
+        isOnline = repository.isOnline()
+    }
 
     fun sync() {
         viewModelScope.launch {
-            isLoading    = true
-            syncSuccess  = false
-            errorMessage = null
-            repository.syncFromServer(token)
+            isLoading   = true
+            syncSuccess = false
+            isOnline    = repository.isOnline()
+            repository.syncFromServer()
                 .onSuccess { result ->
                     raids.clear()
                     raids.addAll(result)
                     syncSuccess = true
-                    launch {
-                        delay(3000)
-                        syncSuccess = false
-                    }
+                    launch { delay(3000); syncSuccess = false }
                 }
                 .onFailure {
-                    val local = repository.loadLocally()
                     raids.clear()
-                    raids.addAll(local)
-                    errorMessage = if (local.isEmpty())
-                        "Hors ligne — aucune donnée locale disponible"
-                    else
-                        "Hors ligne — données locales affichées"
+                    raids.addAll(repository.loadLocally())
+                    errorMessage = it.message
                 }
             isLoading = false
         }
     }
 
-    // ------------------------------------------------------------------ //
-    //  Créer
-    // ------------------------------------------------------------------ //
-
     fun create(raid: Raid) {
         viewModelScope.launch {
-            repository.createRaid(raid, token)
-                .onSuccess { created ->
-                    raids.add(created)
-                }
-                .onFailure {
-                    errorMessage = "Erreur création : ${it.message}"
-                }
+            repository.createRaid(raid)
+                .onSuccess { raids.add(it) }
+                .onFailure { errorMessage = "Erreur création : ${it.message}" }
         }
     }
-
-    // ------------------------------------------------------------------ //
-    //  Modifier
-    // ------------------------------------------------------------------ //
 
     fun edit(raid: Raid) {
         viewModelScope.launch {
-            repository.updateRaid(raid, token)
+            repository.updateRaid(raid)
                 .onSuccess { updated ->
-                    val index = raids.indexOfFirst { it.id == updated.id }
-                    if (index != -1) raids[index] = updated
+                    val i = raids.indexOfFirst { it.id == updated.id }
+                    if (i != -1) raids[i] = updated
                 }
-                .onFailure {
-                    errorMessage = "Erreur modification : ${it.message}"
-                }
+                .onFailure { errorMessage = "Erreur modification : ${it.message}" }
         }
     }
 
-    // ------------------------------------------------------------------ //
-    //  Supprimer
-    // ------------------------------------------------------------------ //
-
     fun delete(id: Int) {
         viewModelScope.launch {
-            repository.deleteRaid(id, token)
-                .onSuccess {
-                    raids.removeIf { it.id == id }
-                }
-                .onFailure {
-                    errorMessage = "Erreur suppression : ${it.message}"
-                }
+            repository.deleteRaid(id)
+                .onSuccess { raids.removeIf { it.id == id } }
+                .onFailure { errorMessage = "Erreur suppression : ${it.message}" }
         }
     }
 }

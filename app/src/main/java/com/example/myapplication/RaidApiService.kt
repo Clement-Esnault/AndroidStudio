@@ -8,102 +8,62 @@ import java.net.URL
 
 object RaidApiService {
 
-    private const val TAG = "RaidApiService"
+    private const val TAG      = "RaidApiService"
     private const val BASE_URL = "https://g6-devc3.unicaen.fr/api"
 
-    // ------------------------------------------------------------------ //
-    //  1. AUTHENTIFICATION (POST)
-    // ------------------------------------------------------------------ //
-    fun login(email: String, password: String): Result<String> {
-        return runCatching {
-            val conn = openConnection("/login", "POST")
-            val json = JSONObject().apply {
-                put("email", email)
-                put("password", password)
-            }
-            writeBody(conn, json.toString())
-            val code = conn.responseCode
-            val body = readBody(conn)
-            conn.disconnect()
-
-            if (code != 200) error("Login failed ($code)")
-            JSONObject(body).getString("token")
-        }
+    fun getAllRaids(): Result<List<Raid>> = runCatching {
+        val conn = openConnection("/raids/manage", "GET")
+        val code = conn.responseCode
+        val body = readBody(conn)
+        conn.disconnect()
+        if (code != 200) error("HTTP $code : $body")
+        val array = org.json.JSONArray(body)
+        List(array.length()) { i -> Raid.fromJson(array.getJSONObject(i)) }
     }
 
-    // ------------------------------------------------------------------ //
-    //  2. LECTURE (GET) - Verbe 1
-    // ------------------------------------------------------------------ //
-    fun getAllRaids(token: String): Result<List<Raid>> {
-        return runCatching {
-            val conn = openConnection("/raids", "GET", token)
-            val code = conn.responseCode
-            val body = readBody(conn)
-            conn.disconnect()
-
-            if (code != 200) error("HTTP $code")
-            val array = JSONObject(body).getJSONArray("raids")
-            List(array.length()) { i -> Raid.fromJson(array.getJSONObject(i)) }
-        }
+    fun createRaid(raid: Raid): Result<Raid> = runCatching {
+        val conn = openConnection("/raids", "POST")
+        writeBody(conn, raid.toJson().toString())
+        val code = conn.responseCode
+        val body = readBody(conn)
+        conn.disconnect()
+        if (code !in 200..201) error("Create failed $code: $body")
+        Raid.fromJson(JSONObject(body))
     }
 
-    // ------------------------------------------------------------------ //
-    //  3. CRÉATION (POST) - Verbe 2 (Option A)
-    // ------------------------------------------------------------------ //
-    fun createRaid(raid: Raid, token: String): Result<Raid> {
-        return runCatching {
-            val conn = openConnection("/raids", "POST", token)
-            writeBody(conn, raid.toJson().toString())
-
-            val code = conn.responseCode
-            val body = readBody(conn)
-            conn.disconnect()
-
-            if (code !in 200..201) error("Create failed $code: $body")
-            Raid.fromJson(JSONObject(body))
-        }
+    fun updateRaid(raid: Raid): Result<Raid> = runCatching {
+        val conn = openConnection("/raids/${raid.id}", "PUT")
+        writeBody(conn, raid.toJson().toString())
+        val code = conn.responseCode
+        val body = readBody(conn)
+        conn.disconnect()
+        if (code != 200) error("Update failed $code: $body")
+        Raid.fromJson(JSONObject(body))
     }
 
-    // ------------------------------------------------------------------ //
-    //  4. MODIFICATION (PUT) - Verbe 2 (Option B)
-    // ------------------------------------------------------------------ //
-    fun updateRaid(raid: Raid, token: String): Result<Raid> {
-        return runCatching {
-            val conn = openConnection("/raids/${raid.id}", "PUT", token)
-            writeBody(conn, raid.toJson().toString())
-
-            val code = conn.responseCode
-            val body = readBody(conn)
-            conn.disconnect()
-
-            if (code != 200) error("Update failed $code: $body")
-            Raid.fromJson(JSONObject(body))
-        }
+    fun deleteRaid(id: Int): Result<Unit> = runCatching {
+        val conn = openConnection("/raids/$id", "DELETE")
+        val code = conn.responseCode
+        conn.disconnect()
+        if (code !in 200..204) error("Delete failed $code")
     }
 
-    // ------------------------------------------------------------------ //
-    //  5. SUPPRESSION (DELETE)
-    // ------------------------------------------------------------------ //
-    fun deleteRaid(id: Int, token: String): Result<Unit> {
-        return runCatching {
-            val conn = openConnection("/raids/$id", "DELETE", token)
-            val code = conn.responseCode
-            conn.disconnect()
-            if (code !in 200..204) error("Delete failed $code")
-        }
-    }
-
-    // ------------------------------------------------------------------ //
-    //  UTILITAIRES RÉSEAU
-    // ------------------------------------------------------------------ //
-
-    private fun openConnection(endpoint: String, method: String, token: String? = null): HttpURLConnection {
+    // ── Utilitaires ────────────────────────────────────────────────────────
+    private fun openConnection(endpoint: String, method: String): HttpURLConnection {
         val conn = URL("$BASE_URL$endpoint").openConnection() as HttpURLConnection
         conn.requestMethod = method
         conn.setRequestProperty("Content-Type", "application/json")
         conn.setRequestProperty("Accept", "application/json")
-        token?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
-        conn.connectTimeout = 10000
+
+        // Basic Auth — encode "admin:admin" en base64
+        val credentials = android.util.Base64.encodeToString(
+            "admin:admin".toByteArray(),
+            android.util.Base64.NO_WRAP
+        )
+        conn.setRequestProperty("Authorization", "Basic $credentials")
+
+        conn.connectTimeout = 10_000
+        conn.readTimeout    = 10_000
         return conn
     }
 
