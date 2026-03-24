@@ -2,9 +2,13 @@
   "name": "g6_raids_api",
   "version": "1.0.0",
   "scripts": {
-    "start": "json-server --watch db.json --port 3000"
+    "start": "node server.js"
   },
   "dependencies": {
-    "json-server": "^0.17.4"
+    "json-server": "0.17.4",
+    "axios": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
