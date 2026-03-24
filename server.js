@@ -98,6 +98,11 @@ app.delete('/raids/:id', async (req, res) => {
   res.json({})
 })
 
+// ─── PING (keep-alive) ────────────────────────────────────────────────────────
+app.get('/ping', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime() })
+})
+
 // ─── DÉMARRAGE ────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000
 loadData().then(() => {
