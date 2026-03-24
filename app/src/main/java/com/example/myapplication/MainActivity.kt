@@ -5,7 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
+
 
 class MainActivity : ComponentActivity() {
 
@@ -17,17 +22,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyApplicationTheme {
                 // Compose observe les StateFlow du ViewModel
-                val raids     = viewModel.raids.collectAsState()
-                val isLoading = viewModel.isLoading.collectAsState()
-                val errorMsg  = viewModel.errorMessage.collectAsState()
-                val success   = viewModel.syncSuccess.collectAsState()
+                val raids by viewModel.raids.collectAsState()
+                val isLoading by viewModel.isLoading.collectAsState()
+                val errorMsg by viewModel.errorMessage.collectAsState()
+                val success by viewModel.syncSuccess.collectAsState()
 
                 RaidApp(
                     viewModel = viewModel,
-                    raids     = raids.value,
-                    isLoading = isLoading.value,
-                    errorMsg  = errorMsg.value,
-                    success   = success.value
+                    raids     = raids,
+                    isLoading = isLoading,
+                    errorMsg  = errorMsg,
+                    success   = success
                 )
             }
         }
