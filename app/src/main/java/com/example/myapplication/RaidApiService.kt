@@ -106,8 +106,8 @@ object RaidApiService {
         conn.requestMethod = method
         conn.setRequestProperty("Content-Type", "application/json")
         conn.setRequestProperty("Accept", "application/json")
-        conn.connectTimeout = 10000
-        conn.readTimeout = 10000
+        conn.connectTimeout =  100_000
+        conn.readTimeout = 100_000
 
         // Indispensable pour POST et PUT
         if (method == "POST" || method == "PUT") {

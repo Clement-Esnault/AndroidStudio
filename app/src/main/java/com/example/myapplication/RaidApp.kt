@@ -31,14 +31,15 @@ fun RaidApp(
             TopAppBar(
                 title = { Text("Raids") },
                 actions = {
-                    if (isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(32.dp).padding(end = 8.dp),
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        IconButton(onClick = { viewModel.sync() }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Synchroniser")
+                    IconButton(
+                        onClick = { viewModel.pushToServer() }, // Bouton manuel
+                        enabled = !isLoading
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        } else {
+                            // Icône de synchro (CloudUpload est bien pour signifier "Push")
+                            Icon(Icons.Default.CloudUpload, contentDescription = "Pousser vers le serveur")
                         }
                     }
                 }

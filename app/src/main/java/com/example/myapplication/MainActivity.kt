@@ -9,7 +9,8 @@ import androidx.compose.runtime.getValue
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 
 
 class MainActivity : ComponentActivity() {
@@ -18,6 +19,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val repository = RaidRepository(this)
+
+        val viewModel: RaidViewModel by viewModels { RaidViewModelFactory(repository) }
 
         setContent {
             MyApplicationTheme {
@@ -25,7 +29,7 @@ class MainActivity : ComponentActivity() {
                 val raids by viewModel.raids.collectAsState()
                 val isLoading by viewModel.isLoading.collectAsState()
                 val errorMsg by viewModel.errorMessage.collectAsState()
-                val success by viewModel.syncSuccess.collectAsState()
+                val success by viewModel.isOnline.collectAsState()
 
                 RaidApp(
                     viewModel = viewModel,
@@ -38,6 +42,15 @@ class MainActivity : ComponentActivity() {
         }
 
         // Synchronisation initiale
-        viewModel.sync()
+
+    }
+}
+class RaidViewModelFactory(private val repository: RaidRepository) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(RaidViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return RaidViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

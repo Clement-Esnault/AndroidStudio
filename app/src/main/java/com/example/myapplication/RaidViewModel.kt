@@ -2,72 +2,71 @@ package com.example.myapplication
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room3.compiler.processing.util.Source
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class RaidViewModel : ViewModel() {
+class RaidViewModel(private val repository: RaidRepository) : ViewModel() {
 
-    private val _raids       = MutableStateFlow<List<Raid>>(emptyList())
+    private val _raids = MutableStateFlow<List<Raid>>(emptyList())
     val raids: StateFlow<List<Raid>> = _raids
 
-    private val _isLoading   = MutableStateFlow(false)
+    private val _isOnline = MutableStateFlow(true)
+
+    val isOnline: StateFlow<Boolean> = _isOnline
+    private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _errorMsg    = MutableStateFlow<String?>(null)
+    private val _errorMsg = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMsg
 
-    private val _syncSuccess = MutableStateFlow(false)
-    val syncSuccess: StateFlow<Boolean> = _syncSuccess
+    // Initialisation : On charge uniquement le cache local
+    init {
+        loadFromCache()
+    }
 
-    // ── Synchronisation des raids depuis l'API / GitHub
-    fun sync() {
+    fun loadFromCache() {
         viewModelScope.launch {
-            _isLoading.value   = true
-            _errorMsg.value    = null
-            _syncSuccess.value = false
+            _raids.value = repository.loadLocally()
+        }
+    }
 
-            val result = RaidApiService.getAllRaids()
-            result.onSuccess { raids ->
-                _raids.value       = raids
-                _syncSuccess.value = true
-            }.onFailure { e ->
-                _errorMsg.value = e.message ?: "Erreur inconnue"
-                e.printStackTrace()
+    // BOUTON MANUEL : C'est le seul endroit qui communique avec le serveur
+    fun pushToServer() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            repository.sync().onSuccess { updatedList ->
+                _raids.value = updatedList
+                _errorMsg.value = null
+            }.onFailure {
+                _errorMsg.value = "Erreur de synchronisation : ${it.message}"
             }
-
             _isLoading.value = false
         }
     }
 
+    // CREATE : Sauvegarde uniquement en local (isDirty = true)
     fun create(raid: Raid) {
-        if (RaidApiService.SOURCE == RaidApiService.Source.GITHUB) return
         viewModelScope.launch {
-            val result = RaidApiService.createRaid(raid)
-            result.onSuccess { sync() }
-            result.onFailure { _errorMsg.value = it.message }
+            repository.create(raid)
+            loadFromCache() // On rafraîchit l'UI depuis le cache local
         }
     }
 
+    // EDIT : Sauvegarde uniquement en local (isDirty = true)
     fun edit(raid: Raid) {
-        if (RaidApiService.SOURCE == RaidApiService.Source.GITHUB) return
         viewModelScope.launch {
-            val result = RaidApiService.updateRaid(raid)
-            result.onSuccess { sync() }
-            result.onFailure { _errorMsg.value = it.message }
+            repository.update(raid)
+            loadFromCache() // On rafraîchit l'UI depuis le cache local
         }
     }
 
+    // DELETE : Suppression locale uniquement (markDeleted)
     fun delete(id: Int) {
-        if (RaidApiService.SOURCE == RaidApiService.Source.GITHUB) {
-            _raids.value = _raids.value.filter { it.id != id }
-            return
-        }
         viewModelScope.launch {
-            val result = RaidApiService.deleteRaid(id)
-            result.onSuccess { sync() }
-            result.onFailure { _errorMsg.value = it.message }
+            repository.delete(id)
+            loadFromCache() // On rafraîchit l'UI depuis le cache local
         }
     }
 }
