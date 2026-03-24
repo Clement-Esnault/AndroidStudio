@@ -40,6 +40,9 @@ async function startServer() {
   const router = jsonServer.router(data)
   const middlewares = jsonServer.defaults()
 
+  // Définir RAI_ID comme clé primaire pour la collection raids
+  router.db._.id = 'RAI_ID'
+
   // CORS pour Android
   server.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*')
