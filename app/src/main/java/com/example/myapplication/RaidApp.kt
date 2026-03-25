@@ -132,7 +132,7 @@ fun RaidApp(
 
     // ── Dialogue Confirmation Suppression ───────────────────── //
     deleteTarget?.let { raid ->
-        if (RaidApiService.SOURCE != RaidApiService.Source.GITHUB) {
+        if (RaidApiService.SOURCE == RaidApiService.Source.RENDER) {
             AlertDialog(
                 onDismissRequest = { deleteTarget = null },
                 title = { Text("Supprimer ?") },

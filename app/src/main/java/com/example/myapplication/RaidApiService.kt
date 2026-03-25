@@ -12,16 +12,16 @@ object RaidApiService {
 
     // ── GESTION DES SOURCES ────────────────────────────────────────────────
     enum class Source {
-        RENDER, GITHUB
+        RENDER
     }
 
-    // Basculer sur GITHUB pour tester le mode lecture seule ou secours
+
     val SOURCE = Source.RENDER
 
     private val URL_RENDER = "https://androidstudio-1.onrender.com"
-    private val URL_GITHUB = "https://raw.githubusercontent.com/ton-pseudo/ton-repo/main"
 
-    private val BASE_URL = if (SOURCE == Source.RENDER) URL_RENDER else URL_GITHUB
+
+    private val BASE_URL = URL_RENDER
 
     // ── PUBLIC API ─────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ object RaidApiService {
     suspend fun getAllRaids(): Result<List<Raid>> = withContext(Dispatchers.IO) {
         runCatching {
             // Sur GitHub, le fichier s'appelle souvent raids.json
-            val endpoint = if (SOURCE == Source.GITHUB) "/raids.json" else "/raids"
+            val endpoint =  "/raids"
 
             val conn = openConnection(endpoint, "GET")
             val code = conn.responseCode
@@ -49,7 +49,7 @@ object RaidApiService {
      * Crée un raid (POST) - Désactivé si source = GITHUB
      */
     suspend fun createRaid(raid: Raid): Result<Raid> = withContext(Dispatchers.IO) {
-        if (SOURCE == Source.GITHUB) return@withContext Result.failure(Exception("Lecture seule sur GitHub"))
+
 
         runCatching {
             val conn = openConnection("/raids", "POST")
@@ -68,7 +68,7 @@ object RaidApiService {
      * Met à jour un raid (PUT)
      */
     suspend fun updateRaid(raid: Raid): Result<Raid> = withContext(Dispatchers.IO) {
-        if (SOURCE == Source.GITHUB) return@withContext Result.failure(Exception("Lecture seule sur GitHub"))
+
 
         runCatching {
             val conn = openConnection("/raids/${raid.id}", "PUT")
@@ -87,7 +87,7 @@ object RaidApiService {
      * Supprime un raid (DELETE)
      */
     suspend fun deleteRaid(id: Int): Result<Unit> = withContext(Dispatchers.IO) {
-        if (SOURCE == Source.GITHUB) return@withContext Result.failure(Exception("Lecture seule sur GitHub"))
+
 
         runCatching {
             val conn = openConnection("/raids/$id", "DELETE")
