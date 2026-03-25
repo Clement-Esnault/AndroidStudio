@@ -24,6 +24,8 @@ class RaidViewModel(private val repository: RaidRepository) : ViewModel() {
     // Initialisation : On charge uniquement le cache local
     init {
         loadFromCache()
+
+        pushToServer()
     }
 
     fun loadFromCache() {
