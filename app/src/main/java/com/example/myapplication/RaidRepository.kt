@@ -24,6 +24,8 @@ class RaidRepository(private val context: Context) {
                 caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
+
+
     // ── Persistance locale ─────────────────────────────────────────────────
     private fun saveLocally(raids: List<Raid>) {
         val array = JSONArray()
@@ -156,34 +158,5 @@ class RaidRepository(private val context: Context) {
         }
         clearDirty(id) // Plus besoin de l'updater s'il est supprimé
     }
-    suspend fun getLocalRaids(): List<Raid> = withContext(Dispatchers.IO) {
-        loadLocally()
-    }
 
-    // Cette fonction est celle appelée par ton bouton "Sync"
-    suspend fun pushAndFetch(): Result<List<Raid>> = withContext(Dispatchers.IO) {
-        if (!isOnline()) return@withContext Result.failure(Exception("Pas de réseau"))
-
-        // 1. On pousse les suppressions
-        getIds(KEY_DELETED).forEach { idStr ->
-            RaidApiService.deleteRaid(idStr.toInt()).onSuccess { clearDeleted(idStr.toInt()) }
-        }
-
-        // 2. On pousse les modifs/créations
-        pushDirtyRaids()
-
-        // 3. On récupère les dernières données du serveur (le Fetch)
-        RaidApiService.getAllRaids().onSuccess { serverRaids ->
-            val localRaids = loadLocally()
-
-            // Merge : On garde le local si c'est encore "Dirty" (échec sync partiel)
-            val mergedList = serverRaids.map { sRaid ->
-                localRaids.find { it.id == sRaid.id && it.isDirty } ?: sRaid
-            }.toMutableList()
-
-            mergedList.addAll(localRaids.filter { it.id < 0 })
-            saveLocally(mergedList)
-            return@withContext Result.success(mergedList)
-        }
-    }
 }

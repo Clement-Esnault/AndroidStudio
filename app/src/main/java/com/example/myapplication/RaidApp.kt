@@ -10,8 +10,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import java.util.function.Predicate.not
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
@@ -25,14 +28,44 @@ fun RaidApp(
     // État des dialogues
     var dialogRaid by remember { mutableStateOf<Raid?>(null) }
     var deleteTarget by remember { mutableStateOf<Raid?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
 
     Scaffold(
+        snackbarHost = {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.padding(top = 90.dp)
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { Text("Raids") },
                 actions = {
                     IconButton(
-                        onClick = { viewModel.pushToServer() }, // Bouton manuel
+                        onClick = {
+                            if ( !viewModel.isOnline.value) {
+                            scope.launch {
+                                snackbarHostState.showSnackbar(
+                                    message = "Pas de connexion internet",
+                                    duration = SnackbarDuration.Short
+                                )
+                            }
+                        } else {
+                            scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = "Poussez sur l'API avec succès! ",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                            viewModel.pushToServer()
+                        } }, // Bouton manuel
                         enabled = !isLoading
                     ) {
                         if (isLoading) {

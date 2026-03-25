@@ -15,7 +15,7 @@ import androidx.lifecycle.ViewModelProvider
 
 class MainActivity : ComponentActivity() {
 
-    private val viewModel: RaidViewModel by viewModels()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

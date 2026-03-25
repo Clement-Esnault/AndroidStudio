@@ -24,7 +24,7 @@ class RaidViewModel(private val repository: RaidRepository) : ViewModel() {
     // Initialisation : On charge uniquement le cache local
     init {
         loadFromCache()
-
+        _isOnline.value = repository.isOnline()
         pushToServer()
     }
 
@@ -37,6 +37,8 @@ class RaidViewModel(private val repository: RaidRepository) : ViewModel() {
     // BOUTON MANUEL : C'est le seul endroit qui communique avec le serveur
     fun pushToServer() {
         viewModelScope.launch {
+            _isOnline.value = repository.isOnline()  // Vérification avant sync
+            if (!_isOnline.value) return@launch
             _isLoading.value = true
             repository.sync().onSuccess { updatedList ->
                 _raids.value = updatedList
