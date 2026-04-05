@@ -21,6 +21,10 @@ class RaidViewModel(private val repository: RaidRepository) : ViewModel() {
     private val _errorMsg = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMsg
 
+    private val _syncSuccess = MutableStateFlow(false)
+
+    val syncSuccess: StateFlow<Boolean> = _syncSuccess
+
     // Initialisation : On charge uniquement le cache local
     init {
         loadFromCache()
@@ -37,12 +41,14 @@ class RaidViewModel(private val repository: RaidRepository) : ViewModel() {
     // BOUTON MANUEL : C'est le seul endroit qui communique avec le serveur
     fun pushToServer() {
         viewModelScope.launch {
-            _isOnline.value = repository.isOnline()  // Vérification avant sync
+            _isOnline.value = repository.isOnline()
             if (!_isOnline.value) return@launch
             _isLoading.value = true
+            _syncSuccess.value = false
             repository.sync().onSuccess { updatedList ->
                 _raids.value = updatedList
                 _errorMsg.value = null
+                _syncSuccess.value = true
             }.onFailure {
                 _errorMsg.value = "Erreur de synchronisation : ${it.message}"
             }

@@ -33,6 +33,8 @@ data class Raid(
         put("RAI_TELEPHONE", telephone)
         put("RAI_LIEU", lieu)
         put("RAI_SITE_WEB", siteWeb)
+        put("RAI_STATUS", status)
+        put("RAI_DATE_DEMANDE", dateDemande)
     }
 
     companion object {

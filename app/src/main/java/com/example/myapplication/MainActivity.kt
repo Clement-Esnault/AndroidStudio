@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import kotlin.Result.Companion.success
 
 
 class MainActivity : ComponentActivity() {
@@ -29,7 +30,7 @@ class MainActivity : ComponentActivity() {
                 val raids by viewModel.raids.collectAsState()
                 val isLoading by viewModel.isLoading.collectAsState()
                 val errorMsg by viewModel.errorMessage.collectAsState()
-                val success by viewModel.isOnline.collectAsState()
+                val success by viewModel.syncSuccess.collectAsState()
 
                 RaidApp(
                     viewModel = viewModel,

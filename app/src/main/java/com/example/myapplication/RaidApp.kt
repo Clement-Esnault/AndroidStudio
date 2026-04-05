@@ -235,6 +235,7 @@ fun RaidCard(raid: Raid, onEdit: () -> Unit, onDelete: () -> Unit) {
         }
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RaidDialog(
     raid: Raid,
@@ -248,6 +249,8 @@ fun RaidDialog(
     var dateFin   by remember { mutableStateOf(raid.dateFin) }
     var mail      by remember { mutableStateOf(raid.mail) }
     var status    by remember { mutableStateOf(raid.status) }
+    val statuts   = listOf("EN_ATTENTE", "VALIDE", "REFUSE")
+    var expanded  by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -264,20 +267,43 @@ fun RaidDialog(
                     label = { Text("Date fin (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = mail, onValueChange = { mail = it },
                     label = { Text("Mail") }, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = status, onValueChange = { status = it },
-                    label = { Text("Statut") }, modifier = Modifier.fillMaxWidth())
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = status,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Statut") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        statuts.forEach { s ->
+                            DropdownMenuItem(
+                                text = { Text(s) },
+                                onClick = { status = s; expanded = false }
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
                     onConfirm(raid.copy(
-                        nom = nom,
-                        lieu = lieu,
+                        nom       = nom,
+                        lieu      = lieu,
                         dateDebut = dateDebut,
-                        dateFin = dateFin,
-                        mail = mail,
-                        status = status
+                        dateFin   = dateFin,
+                        mail      = mail,
+                        status    = status
                     ))
                 },
                 enabled = nom.isNotBlank() && lieu.isNotBlank()
